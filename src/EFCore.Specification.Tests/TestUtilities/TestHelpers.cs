@@ -423,6 +423,14 @@ namespace Microsoft.EntityFrameworkCore.TestUtilities
         {
             Assert.Equal(expected.Count, actual.Count);
 
+            if (elementSorter == null && !verifyOrdered)
+            {
+                if (ShouldPerformUnsortedVerification(expected))
+                {
+                    return AssertResults(expected, actual, assertOrder: false);
+                }
+            }
+
             elementSorter = elementSorter ?? (e => e);
             elementAsserter = elementAsserter ?? Assert.Equal;
             if (!verifyOrdered)
@@ -447,6 +455,14 @@ namespace Microsoft.EntityFrameworkCore.TestUtilities
             bool verifyOrdered)
         {
             Assert.Equal(expected.Count, actual.Count);
+
+            if (elementSorter == null && !verifyOrdered)
+            {
+                if (ShouldPerformUnsortedVerification(expected))
+                {
+                    return AssertResults(expected, actual, assertOrder: false);
+                }
+            }
 
             elementAsserter = elementAsserter ?? Assert.Equal;
             if (!verifyOrdered)
@@ -473,6 +489,14 @@ namespace Microsoft.EntityFrameworkCore.TestUtilities
         {
             Assert.Equal(expected.Count, actual.Count);
 
+            if (elementSorter == null && !verifyOrdered)
+            {
+                if (ShouldPerformUnsortedVerification(expected))
+                {
+                    return AssertResults(expected, actual, assertOrder: false);
+                }
+            }
+
             elementAsserter = elementAsserter ?? Assert.Equal;
             if (!verifyOrdered)
             {
@@ -486,6 +510,18 @@ namespace Microsoft.EntityFrameworkCore.TestUtilities
             }
 
             return actual.Count;
+        }
+
+        private static bool ShouldPerformUnsortedVerification<T>(IList<T> expected)
+        {
+            if (expected.Count > 1)
+            {
+                var nonNullElement = expected.FirstOrDefault(e => e != null);
+
+                return nonNullElement != null && nonNullElement.GetType().GetInterface(nameof(IComparable)) == null;
+            }
+
+            return false;
         }
 
         public static void ExecuteWithStrategyInTransaction<TContext>(
