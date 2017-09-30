@@ -64,8 +64,6 @@ namespace Microsoft.EntityFrameworkCore
         private bool _initializing;
         private bool _disposed;
 
-        private AsyncLocal<bool> _leased;
-        
         /// <summary>
         ///     <para>
         ///         Initializes a new instance of the <see cref="DbContext" /> class. The
@@ -281,7 +279,7 @@ namespace Microsoft.EntityFrameworkCore
         [DebuggerStepThrough]
         internal void CheckDisposed()
         {
-            if (_disposed || _leased?.Value == false)
+            if (_disposed)
             {
                 throw new ObjectDisposedException(GetType().ShortDisplayName(), CoreStrings.ContextDisposed);
             }
@@ -484,7 +482,6 @@ namespace Microsoft.EntityFrameworkCore
             Check.NotNull(contextPool, nameof(contextPool));
 
             _dbContextPool = contextPool;
-            _leased = new AsyncLocal<bool> { Value = true };
         }
 
         DbContextPoolConfigurationSnapshot IDbContextPoolable.SnapshotConfiguration()
@@ -492,10 +489,10 @@ namespace Microsoft.EntityFrameworkCore
                 _changeTracker?.AutoDetectChangesEnabled,
                 _changeTracker?.QueryTrackingBehavior,
                 _database?.AutoTransactionsEnabled);
-        
+
         void IDbContextPoolable.Resurrect(DbContextPoolConfigurationSnapshot configurationSnapshot)
         {
-            _leased.Value = true;
+            _disposed = false;
 
             if (configurationSnapshot.AutoDetectChangesEnabled != null)
             {
@@ -515,10 +512,7 @@ namespace Microsoft.EntityFrameworkCore
 
         void IDbContextPoolable.ResetState()
         {
-            var resettableServices 
-                = _contextServices?.InternalServiceProvider?
-                    .GetService<IEnumerable<IResettableService>>()?.ToList();
-
+            var resettableServices = _contextServices?.InternalServiceProvider?.GetService<IEnumerable<IResettableService>>()?.ToList();
             if (resettableServices != null)
             {
                 foreach (var service in resettableServices)
@@ -527,7 +521,7 @@ namespace Microsoft.EntityFrameworkCore
                 }
             }
 
-            _leased.Value = false;
+            _disposed = true;
         }
 
         /// <summary>
@@ -536,8 +530,7 @@ namespace Microsoft.EntityFrameworkCore
         public virtual void Dispose()
         {
             if (_dbContextPool == null
-                || _leased.Value
-                && !_dbContextPool.Return(this))
+                || !_dbContextPool.Return(this))
             {
                 if (!_disposed)
                 {
