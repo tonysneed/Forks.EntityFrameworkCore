@@ -32,5 +32,7 @@
 
   <Target Name="Compile" />
   <Target Name="CopyFilesToOutputDirectory" />
+  <Target Name="Build" DependsOnTargets="$(BuildDependsOn)" />
+  <Target Name="GetTargetPath" DependsOnTargets="$(GetTargetPathDependsOn)" />
 
 </Project>
