@@ -2808,6 +2808,30 @@ WHERE @__Enabled_0 = [e].[IsDeleted]");
             }
         }
 
+        [Fact]
+        public virtual void Local_variable_does_not_clash_with_filter_parameter()
+        {
+            using (CreateDatabase9825())
+            {
+                using (var context = new MyContext9825(_options))
+                {
+                    // ReSharper disable once ConvertToConstant.Local
+                    var IsModerated = false;
+                    var query = context.Users.Where(e => e.IsModerated == IsModerated).ToList();
+
+                    Assert.Single(query);
+
+                    AssertSql(
+                        @"@__$IsModerated_0='' (DbType = String)
+@__IsModerated_0='False'
+
+SELECT [e].[Id], [e].[IsDeleted], [e].[IsModerated]
+FROM [Users] AS [e]
+WHERE (([e].[IsDeleted] = 0) AND (@__$IsModerated_0 IS NULL OR [e].[IsModerated] IS NULL)) AND ([e].[IsModerated] = @__IsModerated_0)");
+                }
+            }
+        }
+
         private SqlServerTestStore CreateDatabase9825()
             => CreateTestStore(
                 () => new MyContext9825(_options),
